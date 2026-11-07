@@ -9,6 +9,11 @@ extension Notification.Name {
     static let lockpawSessionLost = Notification.Name("lockpawSessionLost")
     static let toggleLockpaw = Notification.Name("toggleLockpaw")
     static let lockpawHotkeyPreferenceChanged = Notification.Name("lockpawHotkeyPreferenceChanged")
+    /// LockPawZ: a whole unlock sequence was typed on the physical keyboard while locked.
+    /// userInfo["action"] is the SequenceAction raw value.
+    static let lockpawSequenceMatched = Notification.Name("lockpawSequenceMatched")
+    /// LockPawZ: a sequence was changed in Settings; the tap reloads its matcher.
+    static let lockpawSequencePreferenceChanged = Notification.Name("lockpawSequencePreferenceChanged")
     /// Posted when Settings should open from outside SwiftUI (reopen from Finder, `lockpaw://settings`).
     static let lockpawOpenSettings = Notification.Name("lockpawOpenSettings")
     /// Posted when an AI agent pings (bridged from the distributed notification, or fired by the in-app test button).

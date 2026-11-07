@@ -60,6 +60,7 @@ class LockController: ObservableObject {
     private var accessibilityCheckTimer: Timer?
     private var errorClearTask: Task<Void, Never>?
     private var toggleObserver: Any?
+    private var sequenceObserver: Any?
     private var pingObserver: Any?
     /// `lockpaw://lock|unlock|unlock-password`. Here, not in MenuBarView: SwiftUI builds the
     /// MenuBarExtra content lazily, so observers there didn't exist until the menu had been
@@ -99,12 +100,27 @@ class LockController: ObservableObject {
                 if self.state == .unlocked {
                     self.lock()
                 } else if self.state == .locked {
-                    if HotkeyConfig.requiresAuthenticationToUnlock {
+                    // LockPawZ: in transparent mode the hotkey only ever locks. The way
+                    // out is Touch ID or a sequence, never a combo someone could watch.
+                    if LockMode.isTransparent {
+                        logger.info("hotkey ignored while locked: transparent mode unlocks by sequence or Touch ID")
+                    } else if HotkeyConfig.requiresAuthenticationToUnlock {
                         self.requestUnlock()
                     } else {
                         self.quickUnlock()
                     }
                 }
+            }
+        }
+
+        sequenceObserver = NotificationCenter.default.addObserver(
+            forName: .lockpawSequenceMatched, object: nil, queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            let action = (notification.userInfo?["action"] as? String).flatMap(SequenceAction.init(rawValue:))
+            Task { @MainActor [weak self] in
+                guard let self, let action else { return }
+                self.sequenceUnlock(action)
             }
         }
 
@@ -208,6 +224,7 @@ class LockController: ObservableObject {
 
     deinit {
         if let obs = toggleObserver { NotificationCenter.default.removeObserver(obs) }
+        if let obs = sequenceObserver { NotificationCenter.default.removeObserver(obs) }
         passiveAuthTask?.cancel()
         timer?.invalidate()
         accessibilityCheckTimer?.invalidate()
@@ -332,6 +349,27 @@ class LockController: ObservableObject {
         // and arms the blackout timer.
         presentationController.start(timeout: fadeTimeout, state: $state, error: $lastError)
         return true
+    }
+
+    /// LockPawZ: a whole unlock sequence was typed on the physical keyboard.
+    func sequenceUnlock(_ action: SequenceAction) {
+        guard state == .locked, !authenticationInProgress else { return }
+        logger.notice("sequence matched: \(action.rawValue, privacy: .public), unlocking")
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        unlockSucceeded = true
+        unlock()
+        if action == .screensaver {
+            // The tap is gone and the keyboard is back; hand the Mac to its own screen
+            // saver, which locks it properly when "require password" is on.
+            Self.startScreenSaver()
+        }
+    }
+
+    static func startScreenSaver() {
+        let engine = URL(fileURLWithPath: "/System/Library/CoreServices/ScreenSaverEngine.app")
+        NSWorkspace.shared.openApplication(at: engine, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+            if let error { logger.error("screensaver failed to start: \(error.localizedDescription, privacy: .public)") }
+        }
     }
 
     /// Quick unlock via hotkey — no auth.

@@ -28,6 +28,13 @@ class InputBlocker {
     var lastPhysicalInputPost = Date.distantPast
 
     private var hotkeyObserver: NSObjectProtocol?
+    private var sequenceObserver: NSObjectProtocol?
+
+    /// LockPawZ: the unlock sequences, matched inside the tap callback. Only touched from
+    /// the tap callback and from reloads on the main queue, both on the main run loop.
+    var sequenceMatcher = SequenceMatcher(
+        desktop: UnlockSequence.stored(.desktop), screensaver: UnlockSequence.stored(.screensaver)
+    )
 
     /// Trackpad gestures are swallowed too: a three-finger swipe switches Spaces, and the
     /// incoming Space is drawn uncovered for the length of the slide (#18).
@@ -59,6 +66,19 @@ class InputBlocker {
         ) { [weak self] _ in
             self?.reloadHotkeyConfig()
         }
+        sequenceObserver = NotificationCenter.default.addObserver(
+            forName: .lockpawSequencePreferenceChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.reloadSequences()
+        }
+    }
+
+    func reloadSequences() {
+        sequenceMatcher = SequenceMatcher(
+            desktop: UnlockSequence.stored(.desktop), screensaver: UnlockSequence.stored(.screensaver)
+        )
     }
 
     /// Refresh cached hotkey key-code and modifiers from HotkeyConfig.
@@ -81,6 +101,7 @@ class InputBlocker {
 
         // Ensure cached values are fresh before installing the tap.
         reloadHotkeyConfig()
+        sequenceMatcher.reset()
 
         eventTap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
@@ -150,6 +171,23 @@ class InputBlocker {
                         }
                         return nil
                     }
+
+                    // LockPawZ: feed the unlock sequences. Physical keystrokes only
+                    // (eventSourceUnixProcessID == 0): a script or an agent posting keys
+                    // through the Accessibility API can never type the sequence. Auto-repeats
+                    // and modified keys are ignored so a held or chorded key cannot advance it.
+                    let isPhysical = event.getIntegerValueField(.eventSourceUnixProcessID) == 0
+                    let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
+                    let modified = flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate)
+                    if isPhysical, !isRepeat, !modified,
+                       let action = blocker.sequenceMatcher.feed(keyCode: Int(keyCode)) {
+                        DispatchQueue.main.async {
+                            NotificationCenter.default.post(
+                                name: .lockpawSequenceMatched, object: nil,
+                                userInfo: ["action": action.rawValue]
+                            )
+                        }
+                    }
                 }
 
                 return nil
@@ -190,6 +228,9 @@ class InputBlocker {
     deinit {
         stopBlocking()
         if let observer = hotkeyObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = sequenceObserver {
             NotificationCenter.default.removeObserver(observer)
         }
     }
