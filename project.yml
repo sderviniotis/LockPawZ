@@ -9,6 +9,10 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
+    # Steve's Personal Team (free Apple ID). Kept here so `xcodegen generate` never
+    # drops it: an ad-hoc signed build makes macOS re-ask for Accessibility on every
+    # rebuild, and other Macs treat it as an unidentified developer.
+    DEVELOPMENT_TEAM: JRA488C74T
 
 schemes:
   Lockpaw:
