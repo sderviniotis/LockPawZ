@@ -49,7 +49,7 @@ class Authenticator {
     ///
     /// Biometry only. The password fallback is `verifyPassword(_:)`, typed into the lock
     /// screen itself.
-    func armBiometrics(reason: String = "Unlock Lockpaw") async -> PassiveAuthResult {
+    func armBiometrics(reason: String = "Unlock LockPawZ") async -> PassiveAuthResult {
         cancelPending()
 
         let context = LAContext()

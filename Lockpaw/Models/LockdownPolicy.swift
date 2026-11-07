@@ -34,6 +34,19 @@ enum LockdownPolicy {
         gestureEventTypes.reduce(CGEventMask(0)) { mask, type in mask | (CGEventMask(1) << type) }
     }
 
+    /// LockPawZ: pointer events swallowed in transparent mode. Upstream never blocks these
+    /// because its overlay windows absorb clicks; with no overlay the tap has to. Every
+    /// button, every move and every drag, so the pointer neither moves nor clicks.
+    static let pointerEventTypes: [CGEventType] = [
+        .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp,
+        .otherMouseDown, .otherMouseUp,
+        .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
+    ]
+
+    static var pointerEventMask: CGEventMask {
+        pointerEventTypes.reduce(CGEventMask(0)) { mask, type in mask | (CGEventMask(1) << type.rawValue) }
+    }
+
     /// While the system auth dialog is up the keyboard must reach it, but a gesture still
     /// must not switch Spaces — the dialog can sit open indefinitely. One tap serves both
     /// modes so switching between them never leaves a window with no tap installed.

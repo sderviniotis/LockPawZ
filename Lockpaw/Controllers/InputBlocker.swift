@@ -12,6 +12,9 @@ class InputBlocker {
     /// stay swallowed — the dialog can sit open indefinitely (#18). Read by the tap
     /// callback, which runs on the main run loop that installed it, so no locking.
     var gesturesOnly = false
+    /// LockPawZ: swallow pointer events too (transparent mode, where no overlay absorbs
+    /// clicks). Fixed for the life of a tap; `reinstall()` carries it over.
+    private(set) var blockPointer = false
     private static let inputQueue = DispatchQueue(label: "com.eriknielsen.lockpaw.input", qos: .userInteractive)
 
     /// Cached hotkey values — read once, used in the event tap callback
@@ -28,14 +31,15 @@ class InputBlocker {
 
     /// Trackpad gestures are swallowed too: a three-finger swipe switches Spaces, and the
     /// incoming Space is drawn uncovered for the length of the slide (#18).
-    private static let eventMask: CGEventMask = {
+    private static func eventMask(blockPointer: Bool) -> CGEventMask {
         let types: [CGEventType] = [
             .keyDown, .keyUp, .flagsChanged,
             .scrollWheel,
             .tabletPointer, .tabletProximity
         ]
-        return types.reduce(LockdownPolicy.gestureEventMask) { mask, type in mask | (1 << type.rawValue) }
-    }()
+        let base = types.reduce(LockdownPolicy.gestureEventMask) { mask, type in mask | (1 << type.rawValue) }
+        return blockPointer ? base | LockdownPolicy.pointerEventMask : base
+    }
 
     /// Rest of the gesture stream (a resting finger produces it too) — not proof that
     /// someone is at the keyboard, so it doesn't count toward `.lockpawPhysicalInput`.
@@ -66,8 +70,9 @@ class InputBlocker {
     /// `gesturesOnly` keeps just trackpad gestures blocked — used while the auth dialog
     /// needs the keyboard. Switching modes flips a flag the running tap reads; the tap is
     /// never torn down and recreated for it, which would let input through in between.
-    func startBlocking(gesturesOnly: Bool = false) {
+    func startBlocking(gesturesOnly: Bool = false, blockPointer: Bool = false) {
         self.gesturesOnly = gesturesOnly
+        self.blockPointer = blockPointer
         // A tap can die under us (a locked macOS session, a timeout the system wouldn't let
         // us re-enable). Flipping the flag on a dead tap would leave the keyboard unblocked,
         // so only an enabled tap counts as already blocking.
@@ -81,7 +86,7 @@ class InputBlocker {
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
             options: .defaultTap,
-            eventsOfInterest: Self.eventMask,
+            eventsOfInterest: Self.eventMask(blockPointer: blockPointer),
             callback: { proxy, type, event, refcon -> Unmanaged<CGEvent>? in
                 if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
                     DispatchQueue.main.async {
@@ -168,8 +173,9 @@ class InputBlocker {
     /// display slept, when the old tap may be dead even though it still exists.
     func reinstall() {
         let mode = gesturesOnly
+        let pointer = blockPointer
         stopBlocking()
-        startBlocking(gesturesOnly: mode)
+        startBlocking(gesturesOnly: mode, blockPointer: pointer)
     }
 
     func stopBlocking() {

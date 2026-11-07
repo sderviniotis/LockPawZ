@@ -8,6 +8,7 @@ struct GeneralSettingsPane: View {
     @AppStorage("hotkeyEnabled") private var hotkeyEnabled = HotkeyConfig.defaultEnabled
     @AppStorage(HotkeyConfig.requireAuthenticationToUnlockKey) private var requiresAuthentication = HotkeyConfig.defaultRequireAuthenticationToUnlock
     @AppStorage(Constants.unlockWithMacKey) private var unlockWithMac = false
+    @AppStorage(LockMode.transparentKey) private var transparentLock = LockMode.defaultTransparent
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage(Constants.showMenuBarIconKey) private var showMenuBarIcon = true
 
@@ -40,6 +41,13 @@ struct GeneralSettingsPane: View {
             }
 
             Section("While locked") {
+                Toggle(isOn: $transparentLock) {
+                    SettingLabel(
+                        "Keep the screens visible",
+                        detail: "Blocks the keyboard, mouse and trackpad with no cover. Touch ID's prompt stays on screen. Off shows Lockpaw's cover instead."
+                    )
+                }
+
                 Toggle(isOn: $unlockWithMac) {
                     SettingLabel("Unlock with your Mac", detail: "When macOS locks too, unlocking your Mac also unlocks Lockpaw.")
                 }

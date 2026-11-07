@@ -2,6 +2,25 @@ import XCTest
 @testable import Lockpaw
 
 final class LockdownPolicyTests: XCTestCase {
+    // MARK: - LockPawZ pointer mask
+
+    func testPointerMaskCoversEveryButtonMoveAndDrag() {
+        let expected: [CGEventType] = [
+            .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp,
+            .otherMouseDown, .otherMouseUp,
+            .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
+        ]
+        for type in expected {
+            XCTAssertNotEqual(LockdownPolicy.pointerEventMask & (CGEventMask(1) << type.rawValue), 0, "\(type.rawValue)")
+        }
+    }
+
+    func testPointerMaskLeavesKeysAndScrollToTheBaseMask() {
+        for type in [CGEventType.keyDown, .keyUp, .flagsChanged, .scrollWheel] {
+            XCTAssertEqual(LockdownPolicy.pointerEventMask & (CGEventMask(1) << type.rawValue), 0, "\(type.rawValue)")
+        }
+    }
+
 
     /// Space swipes arrive as `.gesture` events — the one type that must never be dropped
     /// from the mask (#18).

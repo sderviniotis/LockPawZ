@@ -153,8 +153,7 @@ class LockController: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self, self.state == .locked, self.sessionWasLost else { return }
                 self.sessionWasLost = false
-                self.inputBlocker.stopBlocking()
-                self.inputBlocker.startBlocking()
+                self.inputBlocker.reinstall()
                 self.overlayManager.blockSystemDialogs()
                 self.armPassiveAuthAfterInterruption()
             }
@@ -235,6 +234,63 @@ class LockController: ObservableObject {
         NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
         sleepPreventer.preventSleep()
 
+        let transparent = LockMode.isTransparent
+        if transparent {
+            // LockPawZ transparent lock: no cover, no wallpaper, no fade to black. Every
+            // screen stays as it was. The tap swallows keyboard, pointer and gestures
+            // (started below, same deferred pattern as the covered lock), and Touch ID is
+            // armed once the state is .locked, further down.
+            logger.info("lock: transparent mode, pointer blocked at the tap")
+        } else {
+            guard lockCovered() else { return }
+        }
+
+        Task {
+            try? await Task.sleep(nanoseconds: Constants.Timing.inputBlockerDelayNs)
+            // An unlock inside this window must win: starting the blocker now would leave the
+            // keyboard dead with no lock screen up. See InputBlockPolicy.
+            guard InputBlockPolicy.shouldStartDeferredBlocking(state: state) else { return }
+            inputBlocker.startBlocking(blockPointer: transparent)
+        }
+
+        stopTimer()
+        lockStartTime = Date()
+        failCount = 0
+        lastError = nil
+        unlockSucceeded = false
+        lastAuthFailTime = nil
+        passiveAuthSuspended = false
+        biometryAvailable = authenticator.isBiometryAvailable
+        logger.info("lock: biometryAvailable=\(self.biometryAvailable)")
+        errorClearTask?.cancel()
+
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor [weak self] in
+                guard let self,
+                      self.state == .locked || self.state == .unlocking,
+                      let start = self.lockStartTime else { return }
+                self.elapsedTime = Date().timeIntervalSince(start)
+                self.tickPassiveAuth()
+            }
+        }
+
+        startAccessibilityMonitoring()
+        sessionWasLost = false
+        systemLockSeenDuringLock = false
+        pingGate.reset()
+        transitionTo(.locked)
+
+        if transparent {
+            // The covered lock arms from the overlay's fade-in completion (onOpaque). With
+            // no cover there is nothing to wait for; a refusal here is covered by the tick.
+            armPassiveAuth()
+        }
+    }
+
+    /// Upstream's covered lock: wallpaper, shield-level overlays on every screen, fade to
+    /// black. Returns false (and resets state) when no screen can take an overlay.
+    private func lockCovered() -> Bool {
         let mirrorAll = UserDefaults.standard.integer(forKey: "multiDisplayMode") == 1
         let fadeTimeout = FadeToBlack.currentTimeout
         if UserDefaults.standard.bool(forKey: DesktopWallpaper.enabledKey) {
@@ -268,49 +324,14 @@ class LockController: ObservableObject {
             transitionTo(.unlocked)
             lastError = "No screens available"
             scheduleErrorClear()
-            return
+            return false
         }
 
         // After the overlay is up (the failure path above never starts anything) and
-        // before transitionTo(.locked) below, so the state sink observes the entry
-        // into .locked and arms the blackout timer.
+        // before transitionTo(.locked), so the state sink observes the entry into .locked
+        // and arms the blackout timer.
         presentationController.start(timeout: fadeTimeout, state: $state, error: $lastError)
-
-        Task {
-            try? await Task.sleep(nanoseconds: Constants.Timing.inputBlockerDelayNs)
-            // An unlock inside this window must win: starting the blocker now would leave the
-            // keyboard dead with no lock screen up. See InputBlockPolicy.
-            guard InputBlockPolicy.shouldStartDeferredBlocking(state: state) else { return }
-            inputBlocker.startBlocking()
-        }
-
-        stopTimer()
-        lockStartTime = Date()
-        failCount = 0
-        lastError = nil
-        unlockSucceeded = false
-        lastAuthFailTime = nil
-        passiveAuthSuspended = false
-        biometryAvailable = authenticator.isBiometryAvailable
-        logger.info("lock: biometryAvailable=\(self.biometryAvailable)")
-        errorClearTask?.cancel()
-
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor [weak self] in
-                guard let self,
-                      self.state == .locked || self.state == .unlocking,
-                      let start = self.lockStartTime else { return }
-                self.elapsedTime = Date().timeIntervalSince(start)
-                self.tickPassiveAuth()
-            }
-        }
-
-        startAccessibilityMonitoring()
-        sessionWasLost = false
-        systemLockSeenDuringLock = false
-        pingGate.reset()
-        transitionTo(.locked)
+        return true
     }
 
     /// Quick unlock via hotkey — no auth.
@@ -330,6 +351,12 @@ class LockController: ObservableObject {
     /// dialog this replaces was a bypass, and what guards the keyboard instead.
     func requestUnlock(onScreen screenIndex: Int? = nil) {
         guard state == .locked, !authenticationInProgress else { return }
+        // LockPawZ: the password field is drawn on the overlay, and transparent mode has
+        // none. Touch ID (armed) and the unlock sequence are the ways out.
+        guard !LockMode.isTransparent else {
+            logger.info("requestUnlock ignored: transparent mode has no password field")
+            return
+        }
         let screen = screenIndex ?? 0
 
         // Mirror mode: a click on another display's button moves the open field there.

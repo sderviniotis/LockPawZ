@@ -13,13 +13,15 @@ struct MenuBarView: View {
                 }
                 .keyboardShortcut("l", modifiers: [.command, .shift])
             } else {
-                Button {
-                    controller.requestUnlock()
-                } label: {
-                    Label("Unlock with Password", systemImage: "keyboard")
-                }
+                if !LockMode.isTransparent {
+                    Button {
+                        controller.requestUnlock()
+                    } label: {
+                        Label("Unlock with Password", systemImage: "keyboard")
+                    }
 
-                Divider()
+                    Divider()
+                }
 
                 Label {
                     Text("Locked for \(Constants.formatElapsedTime(controller.elapsedTime))")
