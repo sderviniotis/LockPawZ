@@ -493,6 +493,7 @@ class LockController: ObservableObject {
         guard state == .locked || state == .unlocking else { return }
         if SystemSession.isScreenLocked {
             systemLockSeenDuringLock = true
+            standDownForSystemLock()
             return
         }
         Task { @MainActor [weak self] in
@@ -504,8 +505,22 @@ class LockController: ObservableObject {
                 self.systemScreenLocked = false
                 return
             }
-            if self.state == .locked || self.state == .unlocking { self.systemLockSeenDuringLock = true }
+            if self.state == .locked || self.state == .unlocking {
+                self.systemLockSeenDuringLock = true
+                self.standDownForSystemLock()
+            }
         }
+    }
+
+    /// LockPawZ: macOS has locked its own session, so its login screen owns the Touch ID
+    /// sensor now. Upstream left the armed evaluation in flight and assumed macOS would
+    /// cancel it; on a Mac Studio with a Magic Keyboard it survived 95 minutes and the one
+    /// fingerprint given to the login screen unlocked LockPawZ as well. So: disarm, and stay
+    /// disarmed (the tick checks `systemScreenLocked`) until `handleSystemUnlock` re-arms.
+    private func standDownForSystemLock() {
+        guard passiveEvaluationInFlight else { return }
+        logger.notice("passiveAuth: macOS locked, disarming until it unlocks")
+        disarmPassiveAuth()
     }
 
     /// macOS itself was unlocked. With "unlock with your Mac" on, and a confirmed macOS lock
@@ -733,6 +748,13 @@ class LockController: ObservableObject {
     /// Rides the one-second lock tick, which is already running for the elapsed clock.
     private func tickPassiveAuth() {
         guard state == .locked else { return }
+
+        // LockPawZ: while macOS itself is locked the sensor belongs to the login screen.
+        // Never hold or re-create an evaluation that a login-screen fingerprint could satisfy.
+        if systemScreenLocked || SystemSession.isScreenLocked {
+            standDownForSystemLock()
+            return
+        }
 
         if passwordEntryActive {
             if PasswordEntryPolicy.hasExpired(lastActivity: lastPasswordActivity, now: Date()) {

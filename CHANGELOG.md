@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.1] - 2026-11-08
+
+### Fixed
+
+- Touch ID stays disarmed while macOS itself is locked. The armed evaluation used to survive a
+  macOS lock (screen saver with password, lid closed), so the one fingerprint given to the
+  login screen also unlocked LockPawZ. Found on a Mac Studio with a Magic Keyboard after a
+  95-minute lock. "Unlock with your Mac" (off by default) is now the only thing that ties the
+  two together.
+
 ## [2.0.0] - 2026-11-08 (LockPawZ)
 
 Forked from Lockpaw 1.7.1 as LockPawZ, bundle id `com.sderviniotis.lockpawz`.
