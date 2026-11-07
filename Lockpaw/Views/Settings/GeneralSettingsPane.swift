@@ -40,6 +40,24 @@ struct GeneralSettingsPane: View {
                 }
             }
 
+            Section {
+                LabeledContent {
+                    SequenceRecorder(action: .desktop)
+                } label: {
+                    SettingLabel("Unlock", detail: "Typed on the keyboard while locked. Never shown on screen.")
+                }
+                LabeledContent {
+                    SequenceRecorder(action: .screensaver)
+                } label: {
+                    SettingLabel("Unlock and start screen saver", detail: "Hands the Mac to its own lock screen.")
+                }
+            } header: {
+                Text("Unlock sequences")
+            } footer: {
+                Text("Touch ID also unlocks while the screens are visible. The shortcut above only locks.")
+                    .foregroundStyle(.secondary)
+            }
+
             Section("While locked") {
                 Toggle(isOn: $transparentLock) {
                     SettingLabel(
