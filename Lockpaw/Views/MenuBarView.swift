@@ -2,7 +2,6 @@ import SwiftUI
 
 struct MenuBarView: View {
     @ObservedObject var controller: LockController
-    @ObservedObject private var supportAsk = SupportAskController.shared
 
     var body: some View {
         Group {
@@ -32,15 +31,6 @@ struct MenuBarView: View {
                 }
             }
 
-            if controller.state == .unlocked, supportAsk.isShowing {
-                Divider()
-
-                Text("Lockpaw kept watch while your agents worked.")
-                Button("Support Lockpaw\u{2026}") { supportAsk.support() }
-                Button("Not Now") { supportAsk.notNow() }
-                Button("Don\u{2019}t Ask Again") { supportAsk.neverAsk() }
-            }
-
             Divider()
 
             Button("Settings\u{2026}") {
@@ -53,7 +43,5 @@ struct MenuBarView: View {
             }
             .keyboardShortcut("q")
         }
-        // The menu is the ask's only surface, so let a week-old ask lapse when it opens.
-        .onAppear { supportAsk.refresh() }
     }
 }

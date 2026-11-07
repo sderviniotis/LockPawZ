@@ -87,28 +87,4 @@ final class LidSleepPolicyTests: XCTestCase {
         XCTAssertFalse(SystemLockPolicy.forceUnlocksForAccessibility(trusted: false, systemScreenLocked: true))
         XCTAssertFalse(SystemLockPolicy.forceUnlocksForAccessibility(trusted: true, systemScreenLocked: false))
     }
-
-    // MARK: - Helper requirement
-
-    func testRequirementIsAnchoredToTheTeam() {
-        let req = SleepHelper.requirement(team: "78ACS592J2", identifiers: ["com.eriknielsen.lockpaw", "com.eriknielsen.lockpaw.debug"])
-        XCTAssertTrue(req.contains("anchor apple generic"))
-        XCTAssertTrue(req.contains("certificate leaf[subject.OU] = \"78ACS592J2\""))
-        XCTAssertTrue(req.contains("identifier \"com.eriknielsen.lockpaw\" or identifier \"com.eriknielsen.lockpaw.debug\""))
-    }
-
-    /// An ad-hoc binary can claim any identifier, so without a team nothing may connect.
-    func testUnsignedBuildsGetARequirementNothingSatisfies() {
-        XCTAssertEqual(SleepHelper.requirement(team: nil, identifiers: ["x"]), "never")
-        XCTAssertEqual(SleepHelper.requirement(team: "", identifiers: ["x"]), "never")
-        XCTAssertEqual(SleepHelper.requirement(team: "AB\" or always", identifiers: ["x"]), "never")
-    }
-
-    /// The requirement string must compile, or every connection would be refused.
-    func testRequirementCompiles() {
-        var requirement: SecRequirement?
-        let text = SleepHelper.requirement(team: "78ACS592J2", identifiers: SleepHelper.appIdentifiers)
-        XCTAssertEqual(SecRequirementCreateWithString(text as CFString, [], &requirement), errSecSuccess)
-        XCTAssertEqual(SecRequirementCreateWithString("never" as CFString, [], &requirement), errSecSuccess)
-    }
 }

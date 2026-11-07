@@ -23,10 +23,6 @@ enum Constants {
     /// the `lockpaw` CLI, `lockpaw://settings`, and reopening the app are the ways in.
     static let showMenuBarIconKey = "showMenuBarIcon"
 
-    /// UserDefaults key: lid-closed mode — keep the Mac awake with the lid shut while locked,
-    /// via the opt-in root helper. Off by default.
-    static let lidClosedModeKey = "lidClosedMode"
-
     /// UserDefaults key: when macOS locks its own session during a Lockpaw lock (typically
     /// the lid closing with "require password" on), unlocking macOS also unlocks Lockpaw.
     /// Off by default — Lockpaw stays locked.

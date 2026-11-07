@@ -226,7 +226,6 @@ class LockController: ObservableObject {
 
     func lock() {
         guard transitionTo(.locking) else { return }
-        SupportAskController.shared.lockStarted()
         guard AccessibilityChecker.isEnabled else {
             AccessibilityChecker.promptIfNeeded()
             transitionTo(.unlocked)
@@ -310,10 +309,8 @@ class LockController: ObservableObject {
         startAccessibilityMonitoring()
         sessionWasLost = false
         systemLockSeenDuringLock = false
-        WebhookRelayController.shared.lockSessionBegan()
         pingGate.reset()
         transitionTo(.locked)
-        LidSleepController.shared.lockBegan()
     }
 
     /// Quick unlock via hotkey — no auth.
@@ -419,7 +416,6 @@ class LockController: ObservableObject {
         }
         if decision.shouldNotify {
             AgentNotifier.shared.notify(body: ping.summary() + ".", withSound: decision.withSound)
-            WebhookRelayController.shared.relay(ping)
         }
     }
 
@@ -523,13 +519,6 @@ class LockController: ObservableObject {
     }
 
     private func unlock() {
-        // An unlock after an agent ping is Lockpaw having done its job: the one moment the
-        // support ask may come up (the card or the menu, never here). The card only when
-        // every agent finished; one waiting on a permission prompt is not a breakpoint.
-        if !agentPings.isEmpty {
-            let allFinished = agentPings.pings.allSatisfy { $0.kind.status == .done }
-            SupportAskController.shared.noteUnlockAfterPing(allFinished: allFinished)
-        }
         presentationController.stop()
         disarmPassiveAuth(endingSession: true)
         endPasswordEntry()
@@ -544,7 +533,6 @@ class LockController: ObservableObject {
         wallpaper.end()
         inputBlocker.stopBlocking()
         sleepPreventer.allowSleep()
-        LidSleepController.shared.lockEnded()
     }
 
     private func forceUnlock() {
@@ -565,7 +553,6 @@ class LockController: ObservableObject {
         wallpaper.end()
         inputBlocker.stopBlocking()
         sleepPreventer.allowSleep()
-        LidSleepController.shared.lockEnded()
     }
 
     // MARK: - Passive Touch ID

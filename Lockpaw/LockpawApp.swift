@@ -1,5 +1,4 @@
 import SwiftUI
-import Sparkle
 import os.log
 
 private let logger = Logger(subsystem: "com.eriknielsen.lockpaw", category: "App")
@@ -36,10 +35,6 @@ struct LockpawApp: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    let updateCheckViewModel = UpdateCheckViewModel()
-    lazy var updaterController: SPUStandardUpdaterController = {
-        SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: updateCheckViewModel, userDriverDelegate: nil)
-    }()
     private let hotkeyManager = HotkeyManager()
     private var hotkeyObserver: Any?
     private var accessibilityPollTimer: Timer?
@@ -54,23 +49,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Instantiate AgentNotifier now so it registers as the notification-center
         // delegate before launch completes (required for foreground banner presentation).
         _ = AgentNotifier.shared
-
-        // Lid-closed mode: clear a sleep block a crashed previous run may have left.
-        LidSleepController.shared.applicationDidLaunch()
-
-        // Start Sparkle after app is fully launched
-        updateCheckViewModel.bind(to: updaterController.updater)
-        MainActor.assumeIsolated {
-            SettingsWindowController.shared.updateCheckViewModel = updateCheckViewModel
-            // Created now, not on first use, so a licence entered before the first lock or
-            // menu open still gets its welcome card.
-            _ = SupportAskController.shared
-        }
-        do {
-            try updaterController.updater.start()
-        } catch {
-            logger.error("Sparkle updater failed to start: \(error.localizedDescription)")
-        }
 
         // Lockpaw follows the system appearance; the old Light/Dark override is gone.
         UserDefaults.standard.removeObject(forKey: "appearanceMode")
@@ -241,17 +219,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         for url in urls {
             guard url.scheme == Constants.urlScheme else { continue }
             switch url.host {
+            // LockPawZ: lock and settings only. unlock / unlock-password / toggle were removed
+            // so no local process (an agent, a script, a Shortcut) can ever unlock the Mac.
             case "lock": NotificationCenter.default.post(name: .lockpawLock, object: nil)
-            case "unlock": NotificationCenter.default.post(name: .lockpawUnlock, object: nil)
-            case "unlock-password": NotificationCenter.default.post(name: .lockpawUnlockPassword, object: nil)
-            case "toggle": NotificationCenter.default.post(name: .toggleLockpaw, object: nil)
             case "settings":
                 UserDefaults.standard.set(true, forKey: Constants.showMenuBarIconKey)
                 NotificationCenter.default.post(name: .lockpawOpenSettings, object: nil)
             #if DEBUG
-            // Review the supporter card without waiting for its gates. Debug builds only.
-            case "support-card": SupportAskController.shared.previewCard()
-            case "support-card-welcome": SupportAskController.shared.previewWelcome()
             case let host? where host.hasPrefix("settings-"):
                 let name = host.dropFirst("settings-".count).lowercased()
                 if let section = SettingsSection.allCases.first(where: { $0.rawValue.lowercased() == name }) {

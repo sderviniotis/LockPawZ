@@ -145,13 +145,6 @@ class InputBlocker {
                         }
                         return nil
                     }
-
-                    #if DEBUG
-                    if flags.contains(.maskCommand) && flags.contains(.maskShift) && keyCode == 12 {
-                        DispatchQueue.main.async { NSApplication.shared.terminate(nil) }
-                        return nil
-                    }
-                    #endif
                 }
 
                 return nil

@@ -14,9 +14,6 @@ import SwiftUI
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     static let shared = SettingsWindowController()
 
-    /// Set once at launch; the Updates row reads Sparkle's state through it.
-    var updateCheckViewModel: UpdateCheckViewModel?
-
     private var window: NSWindow?
     private var tabs: SettingsTabViewController?
 
@@ -35,7 +32,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     private func makeWindow() -> NSWindow {
-        let tabs = SettingsTabViewController(updates: updateCheckViewModel ?? UpdateCheckViewModel())
+        let tabs = SettingsTabViewController()
         self.tabs = tabs
         let window = NSWindow(contentViewController: tabs)
         // Sized by the pane, so no zoom or resize; a settings window has nothing to minimise to.
@@ -66,12 +63,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 private final class SettingsTabViewController: NSTabViewController {
     private static let lastPaneKey = "settingsLastPane"
 
-    init(updates: UpdateCheckViewModel) {
+    init() {
         super.init(nibName: nil, bundle: nil)
         tabStyle = .toolbar
         transitionOptions = [.crossfade, .allowUserInteraction]
         for section in SettingsSection.allCases {
-            let pane = NSHostingController(rootView: SettingsPane(section: section, updates: updates))
+            let pane = NSHostingController(rootView: SettingsPane(section: section))
             pane.sizingOptions = [.preferredContentSize]
             pane.title = section.title
             let item = NSTabViewItem(viewController: pane)
@@ -103,14 +100,13 @@ private final class SettingsTabViewController: NSTabViewController {
 /// Routes a section to its pane.
 private struct SettingsPane: View {
     let section: SettingsSection
-    let updates: UpdateCheckViewModel
 
     var body: some View {
         switch section {
         case .general: GeneralSettingsPane()
         case .lockScreen: LockScreenSettingsPane()
         case .agents: AgentSettingsPane()
-        case .about: AboutSettingsPane(updates: updates)
+        case .about: AboutSettingsPane()
         }
     }
 }

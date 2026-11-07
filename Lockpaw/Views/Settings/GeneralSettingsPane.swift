@@ -7,12 +7,10 @@ import Carbon
 struct GeneralSettingsPane: View {
     @AppStorage("hotkeyEnabled") private var hotkeyEnabled = HotkeyConfig.defaultEnabled
     @AppStorage(HotkeyConfig.requireAuthenticationToUnlockKey) private var requiresAuthentication = HotkeyConfig.defaultRequireAuthenticationToUnlock
-    @AppStorage(Constants.lidClosedModeKey) private var lidClosedMode = false
     @AppStorage(Constants.unlockWithMacKey) private var unlockWithMac = false
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage(Constants.showMenuBarIconKey) private var showMenuBarIcon = true
 
-    @ObservedObject private var lidSleep = LidSleepController.shared
     @State private var accessibilityGranted = AccessibilityChecker.isEnabled
 
     /// Accessibility can be granted in System Settings at any moment; poll while visible.
@@ -42,21 +40,6 @@ struct GeneralSettingsPane: View {
             }
 
             Section("While locked") {
-                Toggle(isOn: Binding(get: { lidClosedMode }, set: { lidSleep.setEnabled($0) })) {
-                    SettingLabel(
-                        "Keep running with the lid closed",
-                        detail: "Your agents keep working. Sleep comes back if the Mac runs hot or the battery drops to \(LidSleepPolicy.batteryFloor)%."
-                    )
-                }
-
-                if lidClosedMode {
-                    LabeledContent {
-                        lidHelperControl
-                    } label: {
-                        SettingLabel("Helper", detail: lidSleep.lastError ?? lidHelperDetail)
-                    }
-                }
-
                 Toggle(isOn: $unlockWithMac) {
                     SettingLabel("Unlock with your Mac", detail: "When macOS locks too, unlocking your Mac also unlocks Lockpaw.")
                 }
@@ -87,10 +70,6 @@ struct GeneralSettingsPane: View {
             let granted = AccessibilityChecker.isEnabled
             if granted != accessibilityGranted { accessibilityGranted = granted }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            // The user may be back from approving the helper in Login Items.
-            lidSleep.refreshStatus()
-        }
     }
 
     private var permissionSection: some View {
@@ -108,31 +87,6 @@ struct GeneralSettingsPane: View {
                     detail: accessibilityGranted ? nil : "Needed for the shortcut and to block the keyboard while locked."
                 )
             }
-        }
-    }
-
-    private var lidHelperDetail: String {
-        switch lidSleep.helperStatus {
-        case .enabled: return lidSleep.sleepHeld ? "Keeping the Mac awake while locked." : "Ready. Only active while Lockpaw is locked."
-        case .requiresApproval: return "Allow Lockpaw in Login Items to finish setting up."
-        case .notRegistered: return "Not installed yet."
-        case .unavailable: return "This build isn't signed, so the helper can't run."
-        }
-    }
-
-    @ViewBuilder
-    private var lidHelperControl: some View {
-        switch lidSleep.helperStatus {
-        case .enabled:
-            Label("Ready", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(settingsAccentColor)
-        case .requiresApproval:
-            Button("Open Login Items") { lidSleep.openLoginItems() }
-        case .notRegistered:
-            Button("Install") { lidSleep.setEnabled(true) }
-        case .unavailable:
-            Label("Unavailable", systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(Color("LockpawAmber"))
         }
     }
 }

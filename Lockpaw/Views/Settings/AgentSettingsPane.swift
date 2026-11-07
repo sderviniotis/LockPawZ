@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Agents: connect them first (with which ones already are), then how a ping looks and
-/// sounds, then the optional relay to a phone or webhook.
+/// sounds. LockPawZ: the phone/webhook relay was removed; nothing leaves the Mac.
 struct AgentSettingsPane: View {
     @AppStorage(GlowIntensity.storageKey) private var glowIntensity = GlowIntensity.defaultValue.rawValue
     @AppStorage(Constants.agentPingSoundKey) private var pingSound = false
@@ -58,8 +58,6 @@ struct AgentSettingsPane: View {
                     }
                 }
             }
-
-            RelaySection()
 
             Section {
                 LabeledContent {
@@ -211,118 +209,5 @@ private struct AgentButton: View {
         case .connected: return "Connected"
         case .failed: return "Couldn't connect"
         }
-    }
-}
-
-/// "Send pings to your phone": off by default, the one feature that sends ping data over
-/// the network. Secrets go to the Keychain, never UserDefaults: on Return, on Send Test,
-/// when switching provider, and when the pane closes.
-private struct RelaySection: View {
-    @AppStorage(WebhookRelayController.providerKey) private var provider = WebhookRelay.Provider.off.rawValue
-    @AppStorage(WebhookRelayController.includeProjectKey) private var includeProject = false
-    @ObservedObject private var relay = WebhookRelayController.shared
-
-    @State private var ntfyServer = ""
-    @State private var ntfyTopic = ""
-    @State private var ntfyToken = ""
-    @State private var pushoverUser = ""
-    @State private var pushoverToken = ""
-    @State private var webhookURL = ""
-
-    private var selected: WebhookRelay.Provider { WebhookRelay.Provider(rawValue: provider) ?? .off }
-
-    var body: some View {
-        Section {
-            Picker(selection: $provider) {
-                ForEach(WebhookRelay.Provider.allCases, id: \.rawValue) { Text($0.displayName).tag($0.rawValue) }
-            } label: {
-                SettingLabel("Send to", detail: selected == .off ? "Get pings on your phone, or in Home Assistant, while you're away." : nil)
-            }
-            .pickerStyle(.menu)
-            .onChange(of: provider) { _, newValue in
-                commitAll()
-                if newValue == WebhookRelay.Provider.ntfy.rawValue {
-                    relay.ensureNtfyTopic()
-                    load()
-                }
-            }
-
-            switch selected {
-            case .off:
-                EmptyView()
-            case .ntfy:
-                field("Server", text: $ntfyServer, secret: .ntfyServer, prompt: "https://ntfy.sh")
-                field("Topic", detail: "Subscribe to this in the ntfy app. On a public server, the topic is the password.", text: $ntfyTopic, secret: .ntfyTopic, prompt: "lockpaw-\u{2026}")
-                field("Access token", detail: "Only if your server needs one.", text: $ntfyToken, secret: .ntfyToken, prompt: "Optional", isSecure: true)
-            case .pushover:
-                field("User key", text: $pushoverUser, secret: .pushoverUser, prompt: "u\u{2026}", isSecure: true)
-                field("App token", detail: "Create an application at pushover.net to get one.", text: $pushoverToken, secret: .pushoverToken, prompt: "a\u{2026}", isSecure: true)
-            case .webhook:
-                field("URL", detail: "Gets a JSON POST with the agent, what happened and when.", text: $webhookURL, secret: .webhookURL, prompt: "https://\u{2026}", isSecure: true)
-            }
-
-            if selected != .off {
-                Toggle(isOn: $includeProject) {
-                    SettingLabel("Include the project name", detail: "\u{201C}Claude Code finished in web-app\u{201D} instead of \u{201C}Claude Code finished\u{201D}.")
-                }
-                LabeledContent {
-                    Button("Send Test") {
-                        commitAll()
-                        relay.sendTest()
-                    }
-                } label: {
-                    SettingLabel("Test", detail: relay.lastResult)
-                }
-            }
-        } header: {
-            Text("Send pings off this Mac")
-        } footer: {
-            if selected != .off {
-                Text("Only the agent and what happened are sent, never paths or what the agent wrote.")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .onAppear(perform: load)
-        .onDisappear(perform: commitAll)
-    }
-
-    private func field(
-        _ title: String, detail: String? = nil, text: Binding<String>,
-        secret: WebhookRelayController.Secret, prompt: String, isSecure: Bool = false
-    ) -> some View {
-        LabeledContent {
-            Group {
-                if isSecure {
-                    SecureField(title, text: text, prompt: Text(prompt))
-                } else {
-                    TextField(title, text: text, prompt: Text(prompt))
-                }
-            }
-            .labelsHidden()
-            .textFieldStyle(.roundedBorder)
-            .frame(width: 260)
-            .onSubmit { relay.setSecret(secret, text.wrappedValue) }
-        } label: {
-            SettingLabel(title, detail: detail)
-        }
-    }
-
-    private func load() {
-        // Empty means ntfy.sh (the placeholder says so), so the default is never stored.
-        ntfyServer = relay.secret(.ntfyServer)
-        ntfyTopic = relay.secret(.ntfyTopic)
-        ntfyToken = relay.secret(.ntfyToken)
-        pushoverUser = relay.secret(.pushoverUser)
-        pushoverToken = relay.secret(.pushoverToken)
-        webhookURL = relay.secret(.webhookURL)
-    }
-
-    private func commitAll() {
-        relay.setSecret(.ntfyServer, ntfyServer)
-        relay.setSecret(.ntfyTopic, ntfyTopic)
-        relay.setSecret(.ntfyToken, ntfyToken)
-        relay.setSecret(.pushoverUser, pushoverUser)
-        relay.setSecret(.pushoverToken, pushoverToken)
-        relay.setSecret(.webhookURL, webhookURL)
     }
 }

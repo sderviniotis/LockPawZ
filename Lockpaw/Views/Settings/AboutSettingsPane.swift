@@ -1,15 +1,11 @@
 import SwiftUI
 
-private let sponsorsURL = URL(string: "https://github.com/sponsors/sorkila")!
-private let creatorURL = URL(string: "https://sorkila.com")!
+private let upstreamURL = URL(string: "https://github.com/sorkila/lockpaw")!
+private let forkURL = URL(string: "https://github.com/sderviniotis/LockPawZ")!
 
-/// About: the version and updates, the supporter licence, who makes it, and the honest
-/// note about what kind of lock this is.
+/// About: version, lineage, and the honest note about what kind of lock this is.
+/// LockPawZ has no update channel and no licence: it is built and installed by hand.
 struct AboutSettingsPane: View {
-    @ObservedObject var updates: UpdateCheckViewModel
-    @ObservedObject private var supporter = Supporter.shared
-    @State private var licenceKey = ""
-
     var body: some View {
         Form {
             Section {
@@ -19,78 +15,23 @@ struct AboutSettingsPane: View {
                         .frame(width: 52, height: 52)
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Lockpaw").font(.title3.weight(.semibold))
+                        Text("LockPawZ").font(.title3.weight(.semibold))
                         Text(versionText).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    if supporter.isSupporter {
-                        Label("Supporter", systemImage: "heart.fill")
-                            .foregroundStyle(settingsAccentColor)
-                    }
                 }
                 .padding(.vertical, 4)
-
-                LabeledContent {
-                    Button {
-                        updates.checkForUpdates()
-                    } label: {
-                        if updates.isChecking {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Text("Check for Updates")
-                        }
-                    }
-                    .disabled(!updates.canCheckForUpdates || updates.isChecking)
-                } label: {
-                    SettingLabel("Updates", detail: updateDetail)
-                }
             }
 
             Section {
-                if supporter.isSupporter {
-                    LabeledContent {
-                        Button("Remove Licence", role: .destructive) { supporter.removeLicence() }
-                    } label: {
-                        SettingLabel("Supporter licence", detail: supporter.message ?? "Thank you. Your licence is saved on this Mac.")
-                    }
-                } else {
-                    LabeledContent {
-                        HStack(spacing: 8) {
-                            TextField("Licence key", text: $licenceKey, prompt: Text("LOCKPAW-\u{2026}"))
-                                .labelsHidden()
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 190)
-                                .onSubmit { supporter.enter(key: licenceKey) }
-                            Button {
-                                supporter.enter(key: licenceKey)
-                            } label: {
-                                if supporter.isChecking { ProgressView().controlSize(.small) } else { Text("Activate") }
-                            }
-                            .disabled(licenceKey.trimmingCharacters(in: .whitespaces).isEmpty || supporter.isChecking)
-                        }
-                    } label: {
-                        SettingLabel("Supporter licence", detail: supporter.message ?? "Paste the key from your receipt.")
-                    }
-
-                    LabeledContent {
-                        HStack(spacing: 8) {
-                            Button("Sponsor on GitHub") { NSWorkspace.shared.open(sponsorsURL) }
-                            Button("Become a Supporter") { NSWorkspace.shared.open(SupporterLicence.supportPageURL) }
-                        }
-                    } label: {
-                        SettingLabel("Support Lockpaw", detail: "It's free and stays free. Supporters get four extra mascots and seasonal outfits as a thank-you.")
-                    }
+                LabeledContent("Fork") {
+                    Link("sderviniotis/LockPawZ", destination: forkURL)
                 }
-            } header: {
-                Text("Supporter")
-            }
-
-            Section {
-                LabeledContent("Made by") {
-                    Link("Erik Nielsen", destination: creatorURL)
+                LabeledContent("Based on Lockpaw by Erik Nielsen") {
+                    Link("sorkila/lockpaw", destination: upstreamURL)
                 }
             } footer: {
-                Text("Lockpaw covers your screen and blocks the keyboard while you're away. It isn't a replacement for your Mac's own lock screen (Control-Command-Q).")
+                Text("Blocks the keyboard, mouse and trackpad while you're away. It isn't a replacement for your Mac's own lock screen (Control-Command-Q).")
                     .foregroundStyle(.secondary)
             }
         }
@@ -105,15 +46,6 @@ struct AboutSettingsPane: View {
         case let (.some(version), .none): return "Version \(version)"
         case let (.none, .some(build)): return "Build \(build)"
         default: return "Version unknown"
-        }
-    }
-
-    private var updateDetail: String? {
-        switch updates.updateStatus {
-        case .upToDate: return "You're up to date."
-        case .available(let version): return "Version \(version) is available."
-        case .error(let message): return message
-        case nil: return nil
         }
     }
 }
