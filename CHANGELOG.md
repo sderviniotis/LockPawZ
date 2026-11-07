@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.0.0] - 2026-11-08 (LockPawZ)
+
+Forked from Lockpaw 1.7.1 as LockPawZ, bundle id `com.sderviniotis.lockpawz`.
+
+### Added
+
+- Transparent lock mode, on by default: no cover, every screen stays visible, pointer events
+  swallowed at the event tap. Upstream's covered lock is the off position of the new setting.
+- Two unlock sequences (default Down Up Down Up X to the desktop, Down Up Down Up S to the screen
+  saver), 4 to 8 plain keys, physical keystrokes only, 5s between keys, wrong key restarts.
+  Recorder in Settings → General with prefix-conflict checking.
+- `scripts/build-lockpawz.sh`: universal Release build, zip, optional install.
+
+### Changed
+
+- The hotkey only locks. Touch ID and the sequences are the only ways out.
+- Touch ID is armed immediately on lock (no cover to wait for); its prompt is visible on screen.
+- About pane shows the fork and upstream links; no updates row.
+
+### Removed (security review of upstream, 2026-11-08)
+
+- `lockpaw://toggle`, `unlock` and `unlock-password` URL handlers (`toggle` unlocked without auth).
+- Sparkle auto-update, feed and public key.
+- `LockpawHelper` root LaunchDaemon, lid-closed mode, XPC protocol.
+- Supporter licence (Polar), support ask, support card. `Supporter` is a stub, always true.
+- Webhook relay (ntfy / Pushover / webhook) and the Keychain helper.
+- DEBUG Cmd+Shift+Q kill switch in `InputBlocker`.
+- Release workflow, Homebrew cask, FUNDING.yml, appcast stats script.
+
+Upstream history follows.
+
 ## [1.7.1] - 2026-10-26
 
 ### Changed
