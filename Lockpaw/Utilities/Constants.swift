@@ -1,8 +1,8 @@
 import SwiftUI
 
 enum Constants {
-    static let appName = "Lockpaw"
-    static let bundleIdentifier = "com.eriknielsen.lockpaw"
+    static let appName = "LockPawZ"
+    static let bundleIdentifier = "com.sderviniotis.lockpawz"
     static let urlScheme = "lockpaw"
     static let defaultLockMessage = "Agents are working. Don't turn me off."
 

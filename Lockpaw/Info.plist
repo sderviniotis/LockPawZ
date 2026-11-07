@@ -17,9 +17,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.7.1</string>
+	<string>2.0.0</string>
 	<key>CFBundleVersion</key>
-	<string>26</string>
+	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSAppTransportSecurity</key>
@@ -33,12 +33,12 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAccessibilityUsageDescription</key>
-	<string>Lockpaw needs Accessibility access to block keyboard and mouse input while your lock screen is active.</string>
+	<string>LockPawZ needs Accessibility access to block the keyboard, mouse and trackpad while locked.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.eriknielsen.lockpaw</string>
+			<string>com.sderviniotis.lockpawz</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>lockpaw</string>

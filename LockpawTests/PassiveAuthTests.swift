@@ -123,7 +123,7 @@ final class PassiveAuthTests: XCTestCase {
 
     // MARK: - Another app in front stalls the sensor: re-arm
 
-    private let own = "com.eriknielsen.lockpaw"
+    private let own = "com.sderviniotis.lockpawz"
 
     /// Logitech's plugin service taking focus stopped the sensor for the rest of a lock
     /// while the evaluation stayed in flight, so a press on the sensor locked macOS instead.

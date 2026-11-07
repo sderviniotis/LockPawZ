@@ -40,7 +40,7 @@ struct MenuBarView: View {
             }
             .keyboardShortcut(",")
 
-            Button("Quit Lockpaw") {
+            Button("Quit LockPawZ") {
                 NSApplication.shared.terminate(nil)
             }
             .keyboardShortcut("q")

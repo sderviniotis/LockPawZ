@@ -53,7 +53,7 @@ final class AgentNotifier: NSObject, UNUserNotificationCenterDelegate {
 
     private func post(body: String, withSound: Bool) {
         let content = UNMutableNotificationContent()
-        content.title = "Lockpaw"
+        content.title = "LockPawZ"
         content.body = body
         content.sound = withSound ? .default : nil
 

@@ -113,7 +113,7 @@ struct OnboardingView: View {
             mascotHero(size: 96)
 
             VStack(spacing: 8) {
-                Text("Welcome to Lockpaw")
+                Text("Welcome to LockPawZ")
                     .font(.title2.weight(.semibold))
 
                 Text("A screen guard for when your\ncomputer is working and you're not.")

@@ -71,7 +71,7 @@ struct GeneralSettingsPane: View {
                 }
             }
 
-            Section("Lockpaw") {
+            Section("LockPawZ") {
                 Toggle("Open at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, enabled in
                         do {

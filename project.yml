@@ -1,6 +1,6 @@
 name: Lockpaw
 options:
-  bundleIdPrefix: com.eriknielsen
+  bundleIdPrefix: com.sderviniotis
   deploymentTarget:
     macOS: "14.0"
   generateEmptyDirectories: true
@@ -28,8 +28,11 @@ targets:
       - path: Lockpaw
     settings:
       base:
-        PRODUCT_NAME: Lockpaw
-        PRODUCT_BUNDLE_DISPLAY_NAME: Lockpaw
+        PRODUCT_NAME: LockPawZ
+        # The Swift module keeps the upstream name so `@testable import Lockpaw` and every
+        # type reference stay as they are; only the app on disk is called LockPawZ.
+        PRODUCT_MODULE_NAME: Lockpaw
+        PRODUCT_BUNDLE_DISPLAY_NAME: LockPawZ
         INFOPLIST_FILE: Lockpaw/Info.plist
         CODE_SIGN_ENTITLEMENTS: Lockpaw/Lockpaw.entitlements
         CODE_SIGN_STYLE: Automatic
@@ -43,10 +46,10 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: LockpawAccent
       configs:
         Debug:
-          PRODUCT_BUNDLE_IDENTIFIER: com.eriknielsen.lockpaw.debug
-          PRODUCT_BUNDLE_DISPLAY_NAME: Lockpaw Debug
+          PRODUCT_BUNDLE_IDENTIFIER: com.sderviniotis.lockpawz.debug
+          PRODUCT_BUNDLE_DISPLAY_NAME: LockPawZ Debug
         Release:
-          PRODUCT_BUNDLE_IDENTIFIER: com.eriknielsen.lockpaw
+          PRODUCT_BUNDLE_IDENTIFIER: com.sderviniotis.lockpawz
     dependencies:
       - target: LockpawCLI
         embed: true
@@ -80,8 +83,8 @@ targets:
       - path: LockpawTests
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.eriknielsen.lockpaw.tests
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Lockpaw.app/Contents/MacOS/Lockpaw"
+        PRODUCT_BUNDLE_IDENTIFIER: com.sderviniotis.lockpawz.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/LockPawZ.app/Contents/MacOS/LockPawZ"
         BUNDLE_LOADER: "$(TEST_HOST)"
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
